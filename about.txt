@@ -1,0 +1,168 @@
+write something to compress 3d models - initially .obj exported from blender.
+
+main aim is to 
+1 reduce size, both for download, and version control (should not be checking into git anyway, but for the time being will!)
+2 (secondary) improve loading speed.
+
+notes on inefficiency of obj: 
+stored in a text file where each character is 8-bit (0-255), but typically only use much fewer chars (0-9, ",", " ", newline, a few letters...)
+most lines start with "v ", "f "...
+precision is generally unnecessary
+verts, normals, tex coords are specified individually. this typically saves space, though requires processing into combined vertices on loading. vertex colours are stuck with the position data, which (TODO confirm) greatly increases the total number of "v " entries, for objects with many split edges.
+
+if non-faces are sorted by popularity descending, the encoding of ids in faces maybe quite efficient, since shorter ids used more. 
+this is unlikely a big effect for verts since don't vary much. normals maybe helps for say buildings (many axis-aligned normals), but v small # normals anyway.
+
+plan to try: 
+	perhaps put the format of vertices (or put this to the filename?)
+
+	number of vertices. (16 bits for 1-65536 verts)		(for 3D co-ords, 6 bytes total. 4 bytes could be sufficient though ~1600 values per co-ord)			
+		perhaps have 2 verts specifying opposite corners of a bounding box, to map subsequent verts into
+		could try multiple bounding boxes or heirarchical, (and really drop the bits per vert) but complicated.
+	colours can do in 1 bytes (0-255 each) per channel (ie 3 bytes total for rgb) . might pack 4-vec into 3bytes - 6 bits each (64 values)
+	normals might use 1 byte (0-255) per co-ord (ie 3 bytes total, or each x,y,z take say 40 values, product=64000, inside 2 bytes)
+	uvs might do in fewer bytes. perhaps 12 bits per coord can work (for 2D uvs, total 24 bits = 3 bytes. 4096 values, or 2 bytes (256 values))
+	
+	indices will depend how many things there are. max vert indices=65536 (2 bytes) (can go beyond this in wegbl2 AFAIK, but nice to keep small)
+	but things like normals and uvs might have much fewer unique so might use 1 byte (or combine references into 3 bytes if, say, 4096 each)
+	
+	
+	colour, normal, texmap will typically split at the same creases
+	can put some things together in file, and/or have items that specify others by indices (not just faces)
+	
+	eg 
+	current obj export from blender (uvs, normals may be switched.)
+	A) position+colours list
+	B) uvs list	
+	C) normals list
+	D) faces (3* A,B,C ids)
+	
+	possible extension to reduce size of colour data (assuming limited pallette, ~ pointless for for monochrome lighting)
+	A) colours list
+	B) (positions + A ids) list
+	C) uvs list
+	D) normals list
+	E) faces (3* B,C,D ids)
+	
+	presentation using indented tree view
+	
+blender export: 
+
+face
+	pos+color
+	normal
+	uv
+
+more consistent:
+
+face
+	pos
+	color
+	normal
+	uv
+	
+more suitable for gpu: 
+
+face
+	vertex
+		pos+color
+		normal
+		uv
+
+
++consistent
+
+face 
+	vertex
+		pos
+		color
+		normal
+		uv
+	
+	
+	
+	
+	
+	small# normals --- 1 position (at creases)
+	1 normals --- possibly many positions (especially for, say, a building) 
+	
+	small# uv ---- 1 position (creases)
+	1 uv ------- possibly many positions  (can reuse parts of the uv map)
+	
+	small# colors ---1 position (creases) 
+	1 color ---- possibly many positions  (exacerbated by small colour precision)
+	
+	if there are small numbers of pairs of something, say normals and colours, good to pair them up before referencing by other things.
+	
+	no need to reasona about which is best. can try all different variations of sticking stuff together, select smallest result. Doesn't require actually doing the compression - just look at how many unique points (dependent on quantisation too), how many unique pairings (,3-ings...) for various trees that combine data, how many bits are required to reference previous sets (both for rounding to bytes, and assuming some most perfect (but maybe impractical) method where can just save big number resulting from idx1 + idx2*(count1) + idx3*(count2*count3) .
+	
+	collect data for examples. see whether some trees always come out on top.
+	
+	perhaps also compare loading times. if have some general loader of trees, might just test all.
+	
+	suppose that (different to obj exported from blender), aiming to generate the vertex list for the gpu (all attributes associated with a vertex) first, then reference these directly in the faces list (which is also good since, for now, limited to 2^16 verts), might be sensible. (it could be that obj style was chosen for a reason though!)
+	
+	simple version of just list out all vertex attributes together, then faces, might not be that crazy vs most optimal alternative, since many items are similar number of bits as a ref would be. (refs still might point to groups of things though - eg colour+normal)
+	
+	MAYBE - do the simple version first. are results likley acceptable?
+	
+	suppose don't compress things much, max verts = 65536, all attributes
+				each 	coords  total	cumulative					squished total? 
+	positions 	2		3		6		6							
+	colors		1		4		4		10
+    normals		1		3		3		13
+	uvs			2		2		4		17
+	
+	17*65536 = 1.1M -> ~1.1mb for vertex data.
+	
+	face data. 
+	suppose 2 faces per vertex (typical balanced mesh)
+	65536*2*3*2bytes vert references. 
+	12*65536
+	
+	total 65536*29 = 1.9MB !
+	
+	seems like zipped obj smaller than this!
+	
+	compare with menger-edgesplit.obj ( 3.3M )
+	this has ~47k verts, ~36k faces, 3 colour channels, no uvs, so can store as 12bytes per vert.
+	
+	47+36k = 83k
+	*12 = 996k.
+	=> should be able to store this model in ~1Mb
+	the zipped obj is 519k: ~ 1/2 size of projected compressed form!
+	
+	
+	next improvement? perhaps list positions (6 bytes) , all other (6+bytes), then list of full vertices referencing a position (2 bytes), and all other (2-3 bytes?).
+		really answer comes back to try all possibilities!!!
+	
+	
+	
+//RESULTS
+
+version 1 - instead of faces listing all attributes for each vert in face, make attribute list, then faces reference 3 attribute list entries.
+(salso comparision slightly unfair since obj contains title)
+
+object				obj size		obj2 size		%growth		has vert colours? 	obj.zip 	obj2.zip
+buildings			54				59				9			y
+chessb				114				122				7			y
+extruded-thing		601				632				5			y
+menger				1734			1826			5			y
+menger-edgesplit	3365			3540			5			y					519			528
+mesh-sphere			938				1208			28			
+monkeyhead			860				787			   -8			y
+frigate				17				19				11	
+pillar				94				84			   -10	
+sship...			175				173			   -1
+subdiv-cube-flat	52				67				28
+subdiv-cube-smooth	42				35			   -16
+
+basically, slightly bigger, though has many more lines, which might mean can lose more size by stripping out "v " etc at line beginning, newlines.
+
+
+next things to try:
+print stats
+make faces smaller by using hex indices (4 hex per index)
+indexing vert positions, colours separately, both for obj, obj2
+
+	
