@@ -143,19 +143,19 @@ face
 version 1 - instead of faces listing all attributes for each vert in face, make attribute list, then faces reference 3 attribute list entries.
 (salso comparision slightly unfair since obj contains title)
 
-object				obj size		obj2 size		%growth		has vert colours? 	obj.zip 	obj2.zip
-buildings			54				59				9			y
-chessb				114				122				7			y
-extruded-thing		601				632				5			y
-menger				1734			1826			5			y
-menger-edgesplit	3365			3540			5			y					519			528
-mesh-sphere			938				1208			28			
-monkeyhead			860				787			   -8			y
-frigate				17				19				11	
-pillar				94				84			   -10	
-sship...			175				173			   -1
-subdiv-cube-flat	52				67				28
-subdiv-cube-smooth	42				35			   -16
+object				obj size	obj2 size	%growth	vcolours? 	.zip	2.zip	obj3
+buildings			54			59			9		y							29
+chessb				114			122			7		y							74
+extruded-thing		601			632			5		y							383
+menger				1734		1826		5		y							1629
+menger-edgesplit	3365		3540		5		y			519		528		1764
+mesh-sphere			938			1208		28									1286
+monkeyhead			860			787		   -8		y							587
+frigate				17			19			11	
+pillar				94			84		   -10	
+sship...			175			173		   -1
+subdiv-cube-flat	52			67			28
+subdiv-cube-smooth	42			35		   -16
 
 basically, slightly bigger, though has many more lines, which might mean can lose more size by stripping out "v " etc at line beginning, newlines.
 

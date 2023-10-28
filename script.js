@@ -2,21 +2,21 @@
 var fs = require('fs');
 //load in object.
 
-//var filename = "buildings";
-//var filename = "chessb";
+//convertFile("buildings");
+//convertFile("chessb");
 
-//convertFile("extruded-thing");
-//convertFile("menger");
-//convertFile("menger-edgesplit");
-//convertFile("mesh-sphere");
-//convertFile("monkeyhead");
+convertFile("extruded-thing");
+convertFile("menger");
+convertFile("menger-edgesplit");
+convertFile("mesh-sphere");
+convertFile("monkeyhead");
 
 //convertFile("frigate");
 //convertFile("pillar");
 //convertFile("sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04");
 
-convertFile("subdiv-cube-flat");
-convertFile("subdiv-cube-smooth");
+//convertFile("subdiv-cube-flat");
+//convertFile("subdiv-cube-smooth");
 
 function convertFile(filename){
 	fs.readFile('./objs/' + filename + '.obj', {encoding: 'utf-8'}, function (err, data) {
@@ -70,11 +70,69 @@ function loadObjFile(response, filename){
 	
     var newFaces = [];
 
-	//var vertPosAndColorRefs = [];	//for models that have vertex colours
+
+	var toWrite = "";
+	
+
+	hasVertColors = true;	//TODO function variable
+	
+	
+	var vIdxTranslate = (x => x);
+	
+	if (hasVertColors){
+		var usedPositions={};
+		var usedColours={};
+		var positionsArr = [];
+		var coloursArr = [];
+		var posCount=0;
+		var coloursCount=0;
+		var vertPosRefs = [];	//for models that have vertex colours
+		var vertColorRefs = [];
+		
+		for (var vstring of vertstrings){
+			var components = vstring.split(" ");
+			var positionpart = components.slice(1,4).join(" ");
+			var colourpart = components.slice(4).join(" ");
+			var posIdx = usedPositions[positionpart];
+			var colourIdx = usedColours[colourpart];
+			if (posIdx == undefined){
+				usedPositions[positionpart]=posCount;
+				posIdx=posCount;
+				posCount++;	//this same as positionsArr.length
+				positionsArr.push(positionpart);
+			}
+			if (colourIdx == undefined){
+				usedColours[colourpart]=coloursCount;
+				colourIdx=coloursCount;
+				coloursCount++;
+				coloursArr.push(colourpart);
+			}
+			vertPosRefs.push(posIdx);
+			vertColorRefs.push(colourIdx);
+		}
+		toWrite+= positionsArr.map(x=>"vp " + x + "\n").join("");
+		toWrite+= coloursArr.map(x=>"vc " + x + "\n").join("");
+		//TODO include references for both in face or attribute data.
+		
+		vRefsTranslate = ( indices=> {
+			var parts = indices.split("/");
+			var vidx = parts[0] - 1;	//-1 because obj numbers start at 1!
+			var vidxnew = [vertPosRefs[vidx] + 1,vertColorRefs[vidx] + 1].join("/");	//+1 because obj numbers start at 1!
+			parts[0] = vidxnew;
+			return parts.join("/");
+		});
+				
+	} else {
+		toWrite+= vertstrings.join("\n");	//regular vertices
+		toWrite+= "\n";
+	}
 
     for (var face of faces){
         var theseVerts = [];
         for (var vertInFace of face){
+			
+			vertInFace = vRefsTranslate(vertInFace);	//does nothing when no vertex colours.
+			
             var lookedupVertId = usedVerts[vertInFace];
             if (lookedupVertId != undefined){
                 theseVerts.push(lookedupVertId);
@@ -90,19 +148,15 @@ function loadObjFile(response, filename){
         newFaces.push(theseVerts);
     }
 	
-	
 	console.log({vertstrings, vtstrings, vnstrings, faces});
 	
 	//write out the new file.
 	//apart from the faces, initial part is reproduced, though with current method, without anything other than expected flags...
 	
-	var toWrite = "";
-	toWrite+= vertstrings.join("\n");
-	toWrite+= "\n";
-	toWrite+= vtstrings.join("\n");
-	toWrite+= "\n";
-	toWrite+= vnstrings.join("\n");
-	toWrite+= "\n";
+	//toWrite+="here";
+	
+	toWrite+= vtstrings.map(x=>x+"\n").join("");
+	toWrite+= vnstrings.map(x=>x+"\n").join("");
 	
 	//write out attributes
 	var attributeStrings=[];
@@ -122,7 +176,7 @@ function loadObjFile(response, filename){
 	
 
 	
-	fs.writeFile('./obj2/' + filename+ '.obj2', toWrite, function(err) {
+	fs.writeFile('./obj3/' + filename+ '.obj3', toWrite, function(err) {
     if(err) {
         return console.log(err);
     }
