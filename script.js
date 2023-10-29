@@ -124,8 +124,10 @@ function loadObjFile(response, filename){
 		vRefsTranslate = ( indices=> {
 			var parts = indices.split("/");
 			var vidx = parts[0] - 1;	//-1 because obj numbers start at 1!
-			var vidxnew = [vertPosRefs[vidx] + 1,vertColorRefs[vidx] + 1].join("/");	//+1 because obj numbers start at 1!
-			parts[0] = vidxnew;
+			
+			parts[0] = vertPosRefs[vidx] + 1;	//+1 because obj numbers start at 1!
+			parts.push(vertColorRefs[vidx] + 1);
+			
 			return parts.join("/");
 		});
 				
