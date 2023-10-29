@@ -74,11 +74,18 @@ function loadObjFile(response, filename){
 	var extension = "obj3";
 	var hasVertColors = true;		//TODO function variable
 	var useVertexAttributes = true; //TODO function variable
-*/
+	*/
+/*
 	var extension = "obj1";
 	var hasVertColors = true;		//TODO function variable
 	var useVertexAttributes = false;
+*/
+	var extension = "obj2";
+	var hasVertColors = false;		//TODO function variable
+	var useVertexAttributes = true;
 
+
+	var vRefsTranslate = x=>x;
 
 	//write out the new file.
 	//apart from the faces, initial part is reproduced, though with current method, without anything other than expected flags...
@@ -126,8 +133,9 @@ function loadObjFile(response, filename){
 			var vidx = parts[0] - 1;	//-1 because obj numbers start at 1!
 			
 			parts[0] = vertPosRefs[vidx] + 1;	//+1 because obj numbers start at 1!
-			parts.push(vertColorRefs[vidx] + 1);
-			
+			if (hasVertColors){
+				parts.push(vertColorRefs[vidx] + 1);
+			}
 			return parts.join("/");
 		});
 				
