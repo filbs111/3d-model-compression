@@ -18,18 +18,40 @@ convertFile("monkeyhead");
 //convertFile("subdiv-cube-flat");
 //convertFile("subdiv-cube-smooth");
 
+var loaderOptionSets = {
+	obj1:{
+		extension: "obj1",
+		hasVertColors: true,
+		useVertexAttributes: false
+	},
+	obj2:{
+		extension: "obj2",
+		hasVertColors: false,
+		useVertexAttributes: true
+	},
+	obj3:{
+		extension: "obj3",
+		hasVertColors: true,
+		useVertexAttributes: true
+	}
+}
+
 function convertFile(filename){
 	fs.readFile('./objs/' + filename + '.obj', {encoding: 'utf-8'}, function (err, data) {
 		//console.log(err);
 		//console.log(data);
 		//var stringdata = data.toString();
-	  loadObjFile(data, filename);
+	  loadObjFile(data, filename, loaderOptionSets.obj1);
+	  loadObjFile(data, filename, loaderOptionSets.obj2);	//2,3 are pointless/undesirable if object lacks vertex colours
+	  loadObjFile(data, filename, loaderOptionSets.obj3);
 	}); 
 }
 
 
 //adapted from obj loader code from game project.
-function loadObjFile(response, filename){
+function loadObjFile(response, filename, loaderOptions){
+	var {extension, hasVertColors, useVertexAttributes} = loaderOptions;
+	
     console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -69,20 +91,6 @@ function loadObjFile(response, filename){
 	var newVertStrings = [];
 	
     var newFaces = [];
-
-/*
-	var extension = "obj3";
-	var hasVertColors = true;		//TODO function variable
-	var useVertexAttributes = true; //TODO function variable
-	*/
-/*
-	var extension = "obj1";
-	var hasVertColors = true;		//TODO function variable
-	var useVertexAttributes = false;
-*/
-	var extension = "obj2";
-	var hasVertColors = false;		//TODO function variable
-	var useVertexAttributes = true;
 
 
 	var vRefsTranslate = x=>x;
