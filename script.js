@@ -2,15 +2,15 @@
 var fs = require('fs');
 //load in object.
 
-//convertFile("buildings");
-//convertFile("chessb");
-
+convertFile("buildings");
+convertFile("chessb");
+/*
 convertFile("extruded-thing");
 convertFile("menger");
 convertFile("menger-edgesplit");
 convertFile("mesh-sphere");
 convertFile("monkeyhead");
-
+*/
 //convertFile("frigate");
 //convertFile("pillar");
 //convertFile("sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04");
@@ -70,13 +70,20 @@ function loadObjFile(response, filename){
 	
     var newFaces = [];
 
+/*
+	var extension = "obj3";
+	var hasVertColors = true;		//TODO function variable
+	var useVertexAttributes = true; //TODO function variable
+*/
+	var extension = "obj1";
+	var hasVertColors = true;		//TODO function variable
+	var useVertexAttributes = false;
 
+
+	//write out the new file.
+	//apart from the faces, initial part is reproduced, though with current method, without anything other than expected flags...
 	var toWrite = "";
-	
-
-	hasVertColors = true;	//TODO function variable
-	
-	
+		
 	var vIdxTranslate = (x => x);
 	
 	if (hasVertColors){
@@ -126,57 +133,53 @@ function loadObjFile(response, filename){
 		toWrite+= vertstrings.join("\n");	//regular vertices
 		toWrite+= "\n";
 	}
-
-    for (var face of faces){
-        var theseVerts = [];
-        for (var vertInFace of face){
-			
-			vertInFace = vRefsTranslate(vertInFace);	//does nothing when no vertex colours.
-			
-            var lookedupVertId = usedVerts[vertInFace];
-            if (lookedupVertId != undefined){
-                theseVerts.push(lookedupVertId);
-            }else{
-                //newVerts.push(vertInFace.split("/").map(x=>x-1));  //notice subtracting 1 because obj starts counting from 1. FWIW, ends up with -1s in place of emptystrings!
-				newVertStrings.push(vertInFace);
-				
-                theseVerts.push(vertsCount);
-                usedVerts[vertInFace] = vertsCount;
-                vertsCount++;
-            }
-        }
-        newFaces.push(theseVerts);
-    }
-	
-	console.log({vertstrings, vtstrings, vnstrings, faces});
-	
-	//write out the new file.
-	//apart from the faces, initial part is reproduced, though with current method, without anything other than expected flags...
-	
-	//toWrite+="here";
 	
 	toWrite+= vtstrings.map(x=>x+"\n").join("");
 	toWrite+= vnstrings.map(x=>x+"\n").join("");
 	
-	//write out attributes
-	var attributeStrings=[];
-	for (var vert of newVertStrings){
-		attributeStrings.push("a " + vert);
-	}
-	toWrite+= attributeStrings.join("\n");
-	toWrite+= "\n";
 
-	var faceStrings=[];
-	//write out faces referencing the vertex indices (note this is zero indexed, different to how other stuff is in obj
-	for (var face of newFaces){
-		faceStrings.push("f " + face.join(" "));
-	}
-	toWrite+= faceStrings.join("\n");
-	toWrite+= "\n";
-	
+	console.log({vertstrings, vtstrings, vnstrings, faces});
 
+
+	if (useVertexAttributes){
+
+		for (var face of faces){
+			var theseVerts = [];
+			for (var vertInFace of face){
+				
+				vertInFace = vRefsTranslate(vertInFace);	//does nothing when no vertex colours.
+				
+				var lookedupVertId = usedVerts[vertInFace];
+				if (lookedupVertId != undefined){
+					theseVerts.push(lookedupVertId);
+				}else{
+					//newVerts.push(vertInFace.split("/").map(x=>x-1));  //notice subtracting 1 because obj starts counting from 1. FWIW, ends up with -1s in place of emptystrings!
+					newVertStrings.push(vertInFace);
+					
+					theseVerts.push(vertsCount);
+					usedVerts[vertInFace] = vertsCount;
+					vertsCount++;
+				}
+			}
+			newFaces.push(theseVerts);
+		}
 	
-	fs.writeFile('./obj3/' + filename+ '.obj3', toWrite, function(err) {
+		//write out attributes
+		toWrite+= newVertStrings.map(v=> "a " + v + "\n").join("");
+	}else{
+		for (var face of faces){
+			var theseVerts = [];
+			for (var vertInFace of face){
+				vertInFace = vRefsTranslate(vertInFace);	//does nothing when no vertex colours.
+				theseVerts.push(vertInFace);
+			}
+			newFaces.push(theseVerts);
+		}
+	}
+	
+	toWrite+= newFaces.map(f=> "f " + f.join(" ") + "\n").join("");
+	
+	fs.writeFile('./'+extension+'/' + filename+ '.'+extension, toWrite, function(err) {
     if(err) {
         return console.log(err);
     }

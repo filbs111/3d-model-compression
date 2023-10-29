@@ -142,27 +142,21 @@ face
 
 version 1 - instead of faces listing all attributes for each vert in face, make attribute list, then faces reference 3 attribute list entries.
 (salso comparision slightly unfair since obj contains title)
-
-object				obj size	obj2 size	%growth	vcolours? 	.zip	2.zip	obj3
-buildings			54			59			9		y							29
-chessb				114			122			7		y							74
-extruded-thing		601			632			5		y							383
-menger				1734		1826		5		y							1629
-menger-edgesplit	3365		3540		5		y			519		528		1764
-mesh-sphere			938			1208		28									1286
-monkeyhead			860			787		   -8		y							587
+																									best
+object				obj size	obj2 size	%growth	vcolours? 	.zip	2.zip	obj1	obj3
+buildings			54			59			9		y							28.4	28.2		obj3 (attrs+split)
+chessb				114			122			7		y							70		74			obj1 (std+split)
+extruded-thing		601			632			5		y							389		383			obj3 (attrs+split)
+menger				1734		1826		5		y							1739	1629		obj3 (attrs+split)
+menger-edgesplit	3365		3540		5		y			519		528		1743	1764		obj1 (std+split)
+mesh-sphere			938			1208		28									1017	1286		
+monkeyhead			860			787		   -8		y							714		587			obj3 (attrs+split)
 frigate				17			19			11	
 pillar				94			84		   -10	
 sship...			175			173		   -1
 subdiv-cube-flat	52			67			28
 subdiv-cube-smooth	42			35		   -16
 
-basically, slightly bigger, though has many more lines, which might mean can lose more size by stripping out "v " etc at line beginning, newlines.
-
-
-next things to try:
-print stats
-make faces smaller by using hex indices (4 hex per index)
-indexing vert positions, colours separately, both for obj, obj2
+obj3 seems generally good, has benefit of being more gpu-ready. 
 
 	
