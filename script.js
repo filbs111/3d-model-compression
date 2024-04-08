@@ -22,17 +22,25 @@ var loaderOptionSets = {
 	obj1:{
 		extension: "obj1",
 		hasVertColors: true,
-		useVertexAttributes: false
+		useVertexAttributes: false,
 	},
 	obj2:{
 		extension: "obj2",
 		hasVertColors: false,
-		useVertexAttributes: true
+		useVertexAttributes: true,
+		differenceIndices: false
 	},
 	obj3:{
 		extension: "obj3",
 		hasVertColors: true,
-		useVertexAttributes: true
+		useVertexAttributes: true,
+		differenceIndices: false
+	},
+	obj5:{
+		extension: "obj5",
+		hasVertColors: true,
+		useVertexAttributes: true,
+		differenceIndices: true
 	}
 }
 
@@ -44,13 +52,14 @@ function convertFile(filename){
 	  loadObjFile(data, filename, loaderOptionSets.obj1);
 	  loadObjFile(data, filename, loaderOptionSets.obj2);	//2,3 are pointless/undesirable if object lacks vertex colours
 	  loadObjFile(data, filename, loaderOptionSets.obj3);
+	  loadObjFile(data, filename, loaderOptionSets.obj5);	//obj3 but with indices stored as differences
 	}); 
 }
 
 
 //adapted from obj loader code from game project.
 function loadObjFile(response, filename, loaderOptions){
-	var {extension, hasVertColors, useVertexAttributes} = loaderOptions;
+	var {extension, hasVertColors, useVertexAttributes, differenceIndices} = loaderOptions;
 	
     console.log(response);
     var lines = response.split("\n");
@@ -195,7 +204,62 @@ function loadObjFile(response, filename, loaderOptions){
 		}
 	}
 	
-	toWrite+= newFaces.map(f=> "f " + f.join(" ") + "\n").join("");
+
+	if (differenceIndices){
+		//in order to store smaller numbers than indices (which can be ~5 digit numbers for 16 bit indices),
+		// store differences.
+
+		//NOTE sorting attributes may make for smaller differences, but seems like standard process
+		// results in reasonable ordering anyway.
+
+		//sort faces so can store with +ve derivatives.
+		//each face is stored with 1st index relative to 1st index of previous face,
+		// and 2nd, 3rd indices stored as difference from 1st index of current face.
+		//might improve perf by wrapping, but avoid for now. (will help if 2 large indices, one small,
+		//, and with small and very large > 2^15 index)
+		//first cycle each face's verts (retaining winding order)
+
+		//then sort by 1st face index.
+
+		var sortedFaces = newFaces
+		.map( f => {
+			if (f[0]<=f[1]){
+				if (f[0]<=f[2]){
+					return f;
+				}
+			}else{
+				if (f[1]<=f[2]){
+					return [f[1],f[2],f[0]];
+				}
+			}
+			return [f[2],f[0],f[1]];
+		})
+		.sort((a, b) => {
+			var a_minus_b = a[0]-b[0];
+			if (a_minus_b < 0){
+				return -1;
+			}else if (a_minus_b>0){
+				return 1;
+			}
+			return 0;
+		});
+		
+		//store differences.
+		var currentFirstIndex = 0 ;
+		var differenceFaces=sortedFaces.map(f=>{
+			var firstIdx = f[0];
+			var lastFirstIdx = currentFirstIndex;
+			currentFirstIndex = firstIdx;
+			return [currentFirstIndex - lastFirstIdx, f[1]-currentFirstIndex, f[2]-currentFirstIndex];
+		});
+
+		toWrite+= differenceFaces.map(f=> "f " + f.join(" ") + "\n").join("");
+
+	} else {
+
+		toWrite+= newFaces.map(f=> "f " + f.join(" ") + "\n").join("");
+	}
+
 	
 	fs.writeFile('./'+extension+'/' + filename+ '.'+extension, toWrite, function(err) {
     if(err) {
