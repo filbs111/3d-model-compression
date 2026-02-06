@@ -8,6 +8,14 @@ import bpy
 def str_or_empty(input):
   return "" if input is None else str(input+1) #obj indices start from 1!
 
+def print_and_write_to_file(text):
+  print(text)
+  save_file.write(text + "\n")
+
+save_file = open("C:\\Users\\SuperUser\\Desktop\\test-blender-save-obj.obj", "w")
+
+#obj style header
+print_and_write_to_file("# custom obj saver")
 
 for obj in bpy.context.selected_objects:
   print("hello world", obj)
@@ -47,11 +55,15 @@ for obj in bpy.context.selected_objects:
     print(f"num unique positions: {len(unique_positions_arr)}")
     print(f"num unique normals: {len(unique_normals_arr)}")
     
+    
+    print_and_write_to_file(f"o {obj.name}")
+    
     #print verts obj style
     for posn in unique_positions_arr:
-        print(f"v {','.join(map(str,posn))}")
+        print_and_write_to_file(f"v {' '.join(map(str,posn))}")
     for norm in unique_normals_arr:
-        print(f"vn {','.join(map(str,norm))}")
+        print_and_write_to_file(f"vn {' '.join(map(str,norm))}")
+
     
     #Face list that references verts. Not necessarily triangles!
     mesh = obj.data
@@ -62,5 +74,6 @@ for obj in bpy.context.selected_objects:
         for vert_idx in face.vertices:
             attrib_ids = vertex_attribute_ids[vert_idx]
             verts_data_strings.append('/'.join( map(str_or_empty, attrib_ids) ))
+        print_and_write_to_file(f"f {' '.join(verts_data_strings)}")
         
-        print(f"f {' '.join(verts_data_strings)}")
+save_file.close()
