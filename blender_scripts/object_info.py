@@ -31,7 +31,7 @@ for obj in bpy.context.selected_objects:
   if obj and obj.type == 'MESH':
     for vertex in obj.data.vertices:
         
-      print(f"Vertex {vertex.index}: {vertex.co}, normal:{vertex.normal}")
+      #print(f"Vertex {vertex.index}: {vertex.co}, normal:{vertex.normal}")
       
       vectuple = tuple(vertex.co)
       if vectuple in deduped_positions:
@@ -68,41 +68,63 @@ for obj in bpy.context.selected_objects:
     
     #Face list that references verts. Not necessarily triangles!
     mesh = obj.data
-    for face in mesh.polygons:
-        #print(f"Face {face.index}: {face.vertices[:]}")
-        #print /obj style with references to positions and normals
-        verts_data_strings = []
-        for vert_idx in face.vertices:
-            attrib_ids = vertex_attribute_ids[vert_idx]
-            verts_data_strings.append('/'.join( map(str_or_empty, attrib_ids) ))
-        print_and_write_to_file(f"f {' '.join(verts_data_strings)}")
+    
+    face_output_arr = [] #collect face list and print after know uvs etc. however, could interleave
+                        #and just print faces as go along in obj file, but nice to have f lines all at end.
     
     #because uv data might not exist
-    if len(mesh.uv_layers)>0:
-    
-        #check whether it is possible for multiple uv coords (for same layer) to exist on a single vertex. 
-        #seems that ordinarily only 1 uv coords val per vertex, but can get more by messing about with 
-        #uvs - mark seam, lightmap pack... 
-        #TODO create new verts that each have a single uv coord.
-        
-        deduped_vert_uv_tuples = {}
-    
-        layer_zero_data = mesh.uv_layers[0].data
-        print(f"uv data length: {len(layer_zero_data)}")
-        print(f"loops length: {len(mesh.loops)}")
-        for loop in mesh.loops:
-            uv_loop = layer_zero_data[loop.index]
-            #print(f"uv: {uv_loop.uv}, vert: {loop.vertex_index}")
-            vert_uv_tuple = (uv_loop.uv[0],uv_loop.uv[1],loop.vertex_index)
-            if (vert_uv_tuple not in deduped_vert_uv_tuples):
-                deduped_vert_uv_tuples[vert_uv_tuple]=True
-        
-        print(f"num unique vertex, uv tuples: {len(deduped_vert_uv_tuples)}")
-    else:
+    if len(mesh.uv_layers)==0:
         print("no uv data!")
-     
-    #TODO include uv data in output.
+        
+        for face in mesh.polygons:
+            #print(f"Face {face.index}: {face.vertices[:]}")
+            #print /obj style with references to positions and normals
+            verts_data_strings = []
+            for vert_idx in face.vertices:
+                attrib_ids = vertex_attribute_ids[vert_idx]
+                verts_data_strings.append('/'.join( map(str_or_empty, attrib_ids) ))
+            face_output_arr.append(verts_data_strings)
+            
+    else:
     
+        #TODO use this when want to specify verts with all attributes and reference these 
+        # verts for faces. however, don't need this for standard obj export.
+        #deduped_vert_with_uv = {}
+        #unique_vert_with_uv_arr = []
+        
+        deduped_uvs = {}
+        unique_uvs_arr = []
     
+        uv_layer_data = mesh.uv_layers[0].data  #use mesh.uv_layers.active.data ?
+    
+        for face in mesh.polygons:
+            corner_count = len(face.vertices)
+            face_uvs = [uv_layer_data[li] for li in face.loop_indices]
+        
+            verts_data_strings = []
+            for ii in range(corner_count):
+                vert_idx = face.vertices[ii]
+                attrib_ids = vertex_attribute_ids[vert_idx]
+                print(ii)
+                print(face_uvs)
+                uv = face_uvs[ii]
+                print(uv)
+                uvtuple = tuple(uv.uv)
+                if uvtuple in deduped_uvs:
+                  #print("already in dict")
+                  pass
+                else:
+                  deduped_uvs[uvtuple] = len(unique_uvs_arr)
+                  unique_uvs_arr.append(uvtuple)
+                
+                new_attrib_ids = [attrib_ids[0], deduped_uvs[uvtuple], attrib_ids[2]]
+                verts_data_strings.append('/'.join( map(str_or_empty, new_attrib_ids) ))
+            
+            face_output_arr.append(verts_data_strings)
+            
+        print(len(unique_uvs_arr))
+    
+    for verts_data_strings in face_output_arr:
+        print_and_write_to_file(f"f {' '.join(verts_data_strings)}")
     
 save_file.close()
