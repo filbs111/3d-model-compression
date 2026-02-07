@@ -3,6 +3,7 @@
 #then can extend to bake verts, export >3 channel vert colours, bone weights, anim data, etc.
 
 import bpy
+import time
 
 
 def str_or_empty(input):
@@ -13,6 +14,8 @@ def print_and_write_to_file(text):
   save_file.write(text + "\n")
 
 save_file = open("C:\\Users\\SuperUser\\Desktop\\test-blender-save-obj.obj", "w")
+
+t0 = time.perf_counter()
 
 #obj style header
 print_and_write_to_file("# custom obj saver")
@@ -128,3 +131,6 @@ for obj in bpy.context.selected_objects:
         print_and_write_to_file(f"f {' '.join(verts_data_strings)}")
     
 save_file.close()
+
+t1 = time.perf_counter()
+print(f"time taken: {int((t1-t0)*1000)} ms")
