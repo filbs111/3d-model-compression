@@ -9,16 +9,16 @@ import time
 def str_or_empty(input):
   return "" if input is None else str(input+1) #obj indices start from 1!
 
-def print_and_write_to_file(text):
-  print(text)
-  save_file.write(text + "\n")
+def print_and_write_to_file(file_to_write, text):
+  #print(text)
+  file_to_write.write(text + "\n")
 
 save_file = open("C:\\Users\\SuperUser\\Desktop\\test-blender-save-obj.obj", "w")
+save_file2 = open("C:\\Users\\SuperUser\\Desktop\\test-blender-save-obj.obj2", "w")
+    
 
 t0 = time.perf_counter()
 
-#obj style header
-print_and_write_to_file("# custom obj saver")
 
 for obj in bpy.context.selected_objects:
   print("hello world", obj)
@@ -60,20 +60,16 @@ for obj in bpy.context.selected_objects:
     print(f"num unique normals: {len(unique_normals_arr)}")
     
     
-    print_and_write_to_file(f"o {obj.name}")
-    
-    #print verts obj style
-    for posn in unique_positions_arr:
-        print_and_write_to_file(f"v {' '.join(map(str,posn))}")
-    for norm in unique_normals_arr:
-        print_and_write_to_file(f"vn {' '.join(map(str,norm))}")
-
+    deduped_uvs = {}
+    unique_uvs_arr = []
     
     #Face list that references verts. Not necessarily triangles!
     mesh = obj.data
     
-    face_output_arr = [] #collect face list and print after know uvs etc. however, could interleave
-                        #and just print faces as go along in obj file, but nice to have f lines all at end.
+    deduped_attr_strings = {}
+    unique_attr_strings_arr = []
+    
+    face_output_arr = []
     
     #because uv data might not exist
     if len(mesh.uv_layers)==0:
@@ -82,21 +78,21 @@ for obj in bpy.context.selected_objects:
         for face in mesh.polygons:
             #print(f"Face {face.index}: {face.vertices[:]}")
             #print /obj style with references to positions and normals
-            verts_data_strings = []
+            attr_string_refs_for_face = []
             for vert_idx in face.vertices:
                 attrib_ids = vertex_attribute_ids[vert_idx]
-                verts_data_strings.append('/'.join( map(str_or_empty, attrib_ids) ))
-            face_output_arr.append(verts_data_strings)
-            
+                verts_data_string = '/'.join( map(str_or_empty, attrib_ids) )
+                if verts_data_string in deduped_attr_strings:
+                    pass
+                else:
+                    deduped_attr_strings[verts_data_string]=len(unique_attr_strings_arr)
+                    unique_attr_strings_arr.append(verts_data_string)
+                attr_string_refs_for_face.append(deduped_attr_strings[verts_data_string])
+                
+            face_output_arr.append(attr_string_refs_for_face)
     else:
     
-        #TODO use this when want to specify verts with all attributes and reference these 
-        # verts for faces. however, don't need this for standard obj export.
-        #deduped_vert_with_uv = {}
-        #unique_vert_with_uv_arr = []
         
-        deduped_uvs = {}
-        unique_uvs_arr = []
     
         uv_layer_data = mesh.uv_layers[0].data  #use mesh.uv_layers.active.data ?
     
@@ -104,7 +100,7 @@ for obj in bpy.context.selected_objects:
             corner_count = len(face.vertices)
             face_uvs = [uv_layer_data[li] for li in face.loop_indices]
         
-            verts_data_strings = []
+            attr_string_refs_for_face = []
             for ii in range(corner_count):
                 vert_idx = face.vertices[ii]
                 attrib_ids = vertex_attribute_ids[vert_idx]
@@ -121,16 +117,65 @@ for obj in bpy.context.selected_objects:
                   unique_uvs_arr.append(uvtuple)
                 
                 new_attrib_ids = [attrib_ids[0], deduped_uvs[uvtuple], attrib_ids[2]]
-                verts_data_strings.append('/'.join( map(str_or_empty, new_attrib_ids) ))
+                verts_data_string = '/'.join( map(str_or_empty, new_attrib_ids) )
+                if verts_data_string in deduped_attr_strings:
+                    pass
+                else:
+                    deduped_attr_strings[verts_data_string]=len(unique_attr_strings_arr)
+                    unique_attr_strings_arr.append(verts_data_string)
+                attr_string_refs_for_face.append(deduped_attr_strings[verts_data_string])
+                
+            face_output_arr.append(attr_string_refs_for_face)
             
-            face_output_arr.append(verts_data_strings)
             
         print(len(unique_uvs_arr))
     
-    for verts_data_strings in face_output_arr:
-        print_and_write_to_file(f"f {' '.join(verts_data_strings)}")
+    
+    #write standard obj
+    
+    print_and_write_to_file(save_file, "# custom obj saver")
+    print_and_write_to_file(save_file, f"o {obj.name}")
+    
+    #print verts obj style
+    for posn in unique_positions_arr:
+        print_and_write_to_file(save_file, f"v {' '.join(map(str,posn))}")
+    for norm in unique_normals_arr:
+        print_and_write_to_file(save_file, f"vn {' '.join(map(str,norm))}")
+    for uv in unique_uvs_arr:
+        print_and_write_to_file(save_file, f"vt {' '.join(map(str,uv))}")
+    
+    for verts_data_string_refs in face_output_arr:
+        verts_data_strings = [ unique_attr_strings_arr[ref] for ref in verts_data_string_refs]
+        print_and_write_to_file(save_file, f"f {' '.join(verts_data_strings)}")
+    
+    #write modified obj which lists vertices referencing all attributes then faces referencing vertices, 
+    # rather than faces directly referencing individual attributes. reduces file size for smooth polys,
+    # , easier to load into game (because vertices containing all attributes good fit for gl / gpu)
+    
+    print_and_write_to_file(save_file2, "# custom obj saver")
+    print_and_write_to_file(save_file2, f"o {obj.name}")
+    
+    #print verts obj style (same as standard obj)
+    for posn in unique_positions_arr:
+        print_and_write_to_file(save_file2, f"v {' '.join(map(str,posn))}")
+    for norm in unique_normals_arr:
+        print_and_write_to_file(save_file2, f"vn {' '.join(map(str,norm))}")
+    for uv in unique_uvs_arr:
+        print_and_write_to_file(save_file2, f"vt {' '.join(map(str,uv))}")
+    
+    for verts_data_string in unique_attr_strings_arr:
+        print_and_write_to_file(save_file2, f"a {verts_data_string}")
+    
+    # faces reference vertex attributes by id
+    for verts_data_string_refs in face_output_arr:
+        print_and_write_to_file(save_file2, f"f {' '.join(map(str, verts_data_string_refs))}")
+    
+    
+    print(len(unique_uvs_arr))
+    
     
 save_file.close()
+save_file2.close()
 
 t1 = time.perf_counter()
 print(f"time taken: {int((t1-t0)*1000)} ms")
