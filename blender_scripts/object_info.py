@@ -1,6 +1,9 @@
-#print object info.
+#save obj.
 #with view to reproducing obj export, then exporting obj2 etc formats directly without running additional script.
 #then can extend to bake verts, export >3 channel vert colours, bone weights, anim data, etc.
+
+#currently differs from standard blender obj export. suspect that selecting flat shading for object causes
+#faceted output, and position/orientation can be different - application of object pose? swizzling?
 
 import bpy
 import time
