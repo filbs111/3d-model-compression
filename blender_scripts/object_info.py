@@ -12,6 +12,10 @@ import time
 def str_or_empty(input):
   return "" if input is None else str(input+1) #obj indices start from 1!
 
+def limited_float_str(input):
+  return "{:.3f}".format(input)
+#TODO apply this truncation BEFORE deduplication of coords - especially may debloat normals
+
 def print_and_write_to_file(file_to_write, text):
   #print(text)
   file_to_write.write(text + "\n")
@@ -141,11 +145,11 @@ for obj in bpy.context.selected_objects:
     
     #print verts obj style
     for posn in unique_positions_arr:
-        print_and_write_to_file(save_file, f"v {' '.join(map(str,posn))}")
+        print_and_write_to_file(save_file, f"v {' '.join(map(limited_float_str,posn))}")
     for norm in unique_normals_arr:
-        print_and_write_to_file(save_file, f"vn {' '.join(map(str,norm))}")
+        print_and_write_to_file(save_file, f"vn {' '.join(map(limited_float_str,norm))}")
     for uv in unique_uvs_arr:
-        print_and_write_to_file(save_file, f"vt {' '.join(map(str,uv))}")
+        print_and_write_to_file(save_file, f"vt {' '.join(map(limited_float_str,uv))}")
     
     for verts_data_string_refs in face_output_arr:
         verts_data_strings = [ unique_attr_strings_arr[ref] for ref in verts_data_string_refs]
@@ -160,11 +164,11 @@ for obj in bpy.context.selected_objects:
     
     #print verts obj style (same as standard obj)
     for posn in unique_positions_arr:
-        print_and_write_to_file(save_file2, f"v {' '.join(map(str,posn))}")
+        print_and_write_to_file(save_file2, f"v {' '.join(map(limited_float_str,posn))}")
     for norm in unique_normals_arr:
-        print_and_write_to_file(save_file2, f"vn {' '.join(map(str,norm))}")
+        print_and_write_to_file(save_file2, f"vn {' '.join(map(limited_float_str,norm))}")
     for uv in unique_uvs_arr:
-        print_and_write_to_file(save_file2, f"vt {' '.join(map(str,uv))}")
+        print_and_write_to_file(save_file2, f"vt {' '.join(map(limited_float_str,uv))}")
     
     for verts_data_string in unique_attr_strings_arr:
         print_and_write_to_file(save_file2, f"a {verts_data_string}")
